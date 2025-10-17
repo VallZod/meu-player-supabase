@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Player Pessoal</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #121212;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    .player {
+      text-align: center;
+      background: #1e1e1e;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      width: 300px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    img { width: 100%; border-radius: 1rem; }
+    button { margin: 0.5rem; padding: 0.5rem 1rem; border: none; border-radius: 0.5rem; }
+    button:hover { background: #333; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>🎧 Meu Player Pessoal</h1>
+
+  <div class="player">
+    <img id="capa" src="" alt="Capa da música" />
+    <h2 id="titulo">Carregando...</h2>
+    <p id="artista"></p>
+    <audio id="audio" controls style="width: 100%;"></audio>
+    <div>
+      <button onclick="anterior()">⏮</button>
+      <button onclick="tocar()">▶️</button>
+      <button onclick="pausar()">⏸</button>
+      <button onclick="proxima()">⏭</button>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeGd2a3JkbW1janZmamhtdmJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MTUsImV4cCI6MjA3NjIyMTQxNX0.CPQ7pLFCWzb1gUE3upcv78ErCEPSGcWUpDksu3CC45g";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let musicas = [];
+    let indiceAtual = 0;
+
+    async function carregarMusicas() {
+      const { data, error } = await supabase.from('musicas').select('*').order('criado_em', { ascending: true });
+      if (error) return console.error(error);
+      musicas = data;
+      if (musicas.length > 0) tocarMusica(0);
+    }
+
+    function tocarMusica(i) {
+      const m = musicas[i];
+      if (!m) return;
+      indiceAtual = i;
+      document.getElementById('titulo').textContent = m.titulo;
+      document.getElementById('artista').textContent = m.artista || '';
+      document.getElementById('capa').src = m.capa || '';
+      const audio = document.getElementById('audio');
+      audio.src = m.url_arquivo;
+      audio.play();
+
+      // Atualiza o estado do player
+      supabase.from('estado_player').update({
+        musica_atual: m.id,
+        atualizado_em: new Date()
+      }).eq('id', 1);
+    }
+
+    function tocar() {
+      document.getElementById('audio').play();
+    }
+
+    function pausar() {
+      document.getElementById('audio').pause();
+    }
+
+    function proxima() {
+      tocarMusica((indiceAtual + 1) % musicas.length);
+    }
+
+    function anterior() {
+      tocarMusica((indiceAtual - 1 + musicas.length) % musicas.length);
+    }
+
+    carregarMusicas();
+  </script>
+</body>
+</html>

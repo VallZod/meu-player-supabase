@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Player Pessoal</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #121212;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    .player {
+      background: #1e1e1e;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      width: 320px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    img { width: 100%; border-radius: 1rem; margin-bottom: 1rem; }
+    button { margin: 0.3rem; padding: 0.5rem 1rem; border: none; border-radius: 0.5rem; background: #333; color: white; cursor: pointer; }
+    button:hover { background: #444; }
+    .lista {
+      margin-top: 1rem;
+      width: 320px;
+      background: #1a1a1a;
+      border-radius: 1rem;
+      padding: 1rem;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+    .item {
+      padding: 0.4rem;
+      cursor: pointer;
+      border-bottom: 1px solid #333;
+    }
+    .item:hover { background: #333; }
+    input, label {
+      display: block;
+      margin: 0.3rem 0;
+      width: 100%;
+    }
+    .upload {
+      background: #1a1a1a;
+      padding: 1rem;
+      border-radius: 1rem;
+      margin-top: 2rem;
+      width: 320px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎧 Meu Player Pessoal</h1>
+
+  <div class="player">
+    <img id="capa" src="" alt="Capa" />
+    <h2 id="titulo">Nenhuma música</h2>
+    <p id="artista"></p>
+    <audio id="audio" controls style="width: 100%;"></audio>
+    <div>
+      <button onclick="anterior()">⏮</button>
+      <button onclick="tocar()">▶️</button>
+      <button onclick="pausar()">⏸</button>
+      <button onclick="proxima()">⏭</button>
+    </div>
+    <button onclick="editarMusica()">✏️ Editar música</button>
+  </div>
+
+  <div class="lista" id="lista"></div>
+
+  <div class="upload">
+    <h3>📤 Adicionar nova música</h3>
+    <input type="file" id="file" accept="audio/mp3">
+    <input type="text" id="tituloUpload" placeholder="Título">
+    <input type="text" id="artistaUpload" placeholder="Artista">
+    <input type="text" id="capaUpload" placeholder="URL da capa (opcional)">
+    <button onclick="uploadMusica()">Enviar</button>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeGd2a3JkbW1janZmamhtdmJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MTUsImV4cCI6MjA3NjIyMTQxNX0.CPQ7pLFCWzb1gUE3upcv78ErCEPSGcWUpDksu3CC45g";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let musicas = [];
+    let indiceAtual = 0;
+
+    async function carregarMusicas() {
+      const { data, error } = await supabase.from('musicas').select('*').order('criado_em', { ascending: true });
+      if (error) return console.error(error);
+      musicas = data;
+      mostrarLista();
+      if (musicas.length && !document.getElementById('audio').src)
+        tocarMusica(0);
+    }
+
+    function mostrarLista() {
+      const lista = document.getElementById('lista');
+      lista.innerHTML = '';
+      musicas.forEach((m, i) => {
+        const div = document.createElement('div');
+        div.textContent = `${m.titulo} - ${m.artista}`;
+        div.className = 'item';
+        div.onclick = () => tocarMusica(i);
+        lista.appendChild(div);
+      });
+    }
+
+    function tocarMusica(i) {
+      const m = musicas[i];
+      if (!m) return;
+      indiceAtual = i;
+      document.getElementById('titulo').textContent = m.titulo;
+      document.getElementById('artista').textContent = m.artista || '';
+      document.getElementById('capa').src = m.capa || '';
+      const audio = document.getElementById('audio');
+      audio.src = m.url_arquivo;
+      audio.play();
+
+      supabase.from('estado_player')
+        .update({ musica_atual: m.id, atualizado_em: new Date() })
+        .eq('id', 1);
+    }
+
+    function tocar() { document.getElementById('audio').play(); }
+    function pausar() { document.getElementById('audio').pause(); }
+    function proxima() { tocarMusica((indiceAtual + 1) % musicas.length); }
+    function anterior() { tocarMusica((indiceAtual - 1 + musicas.length) % musicas.length); }
+
+    async function uploadMusica() {
+      const file = document.getElementById('file').files[0];
+      if (!file) return alert('Selecione um arquivo MP3!');
+      const nomeArquivo = `${Date.now()}_${file.name}`;
+      const { data, error } = await supabase.storage.from('musicas_novo').upload(nomeArquivo, file);
+      if (error) return alert('Erro ao enviar: ' + error.message);
+
+      const { data: urlData } = supabase.storage.from('musicas_novo').getPublicUrl(nomeArquivo);
+      const titulo = document.getElementById('tituloUpload').value || file.name;
+      const artista = document.getElementById('artistaUpload').value;
+      const capa = document.getElementById('capaUpload').value;
+
+      await supabase.from('musicas').insert({
+        titulo, artista, capa, url_arquivo: urlData.publicUrl
+      });
+
+      alert('Música adicionada!');
+      document.getElementById('file').value = '';
+      document.getElementById('tituloUpload').value = '';
+      document.getElementById('artistaUpload').value = '';
+      document.getElementById('capaUpload').value = '';
+      carregarMusicas();
+    }
+
+    async function editarMusica() {
+      const m = musicas[indiceAtual];
+      if (!m) return alert('Nenhuma música selecionada!');
+      const novoTitulo = prompt('Novo título:', m.titulo);
+      const novoArtista = prompt('Novo artista:', m.artista || '');
+      const novaCapa = prompt('Nova URL de capa:', m.capa || '');
+      await supabase.from('musicas').update({
+        titulo: novoTitulo, artista: novoArtista, capa: novaCapa
+      }).eq('id', m.id);
+      alert('Música atualizada!');
+      carregarMusicas();
+    }
+
+    carregarMusicas();
+  </script>
+</body>
+</html>

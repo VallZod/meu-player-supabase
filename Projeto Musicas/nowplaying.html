@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Now Playing</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body { margin: 0; background: transparent; color: white; font-family: sans-serif; }
+    #texto { font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+  <div id="texto">Carregando...</div>
+  <script>
+    const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeGd2a3JkbW1janZmamhtdmJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MTUsImV4cCI6MjA3NjIyMTQxNX0.CPQ7pLFCWzb1gUE3upcv78ErCEPSGcWUpDksu3CC45g";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    async function atualizar() {
+      const { data, error } = await supabase.from('estado_player').select('musica_atual, musicas(titulo, artista)').eq('id',1).single();
+      if (error) return console.error(error);
+      const m = data.musicas;
+      document.getElementById('texto').textContent = `🎵 ${m.titulo} - ${m.artista}`;
+    }
+
+    // Atualiza a cada 5 segundos
+    atualizar();
+    setInterval(atualizar, 5000);
+  </script>
+</body>
+</html>

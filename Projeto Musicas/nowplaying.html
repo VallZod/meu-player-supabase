@@ -10,75 +10,88 @@
       margin: 0; 
       background: transparent; /* Fundo completamente transparente */
       color: black; /* Cor do texto preta */
-      font-family: 'Bebas Neue', Impact, sans-serif; /* Fonte similar à da imagem */
-      /* Se a fonte Bebas Neue não carregar, Impact ou uma similar será usada */
-      padding: 0; /* Remover qualquer padding extra */
-      display: flex; /* Para alinhar o conteúdo */
-      align-items: center; /* Alinha verticalmente */
-      justify-content: flex-start; /* Alinha à esquerda */
-      height: 100vh; /* Ocupa a altura total da viewport para alinhamento */
-      width: 100vw;  /* Ocupa a largura total da viewport */
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      width: 100vw;
     }
 
-    /* O ícone da nota musical (usaremos uma imagem ou um caracter maior) */
     #icone-musica-img {
-        height: 60px; /* Ajuste o tamanho conforme necessário */
+        height: 60px;
         margin-right: 15px;
-        filter: brightness(0); /* Deixa a imagem preta se ela for colorida */
+        filter: brightness(0);
     }
 
     #info-musica {
         display: flex;
-        flex-direction: column; /* Título e artista em colunas */
-        line-height: 1; /* Para aproximar as linhas */
+        flex-direction: column;
+        line-height: 1;
     }
 
     #titulo-musica { 
-      font-size: 2.5rem; /* Título maior */
+      font-size: 2.5rem;
       font-weight: bold;
-      text-transform: uppercase; /* Em maiúsculas */
-      margin-bottom: 5px; /* Espaço entre título e artista */
+      text-transform: uppercase;
+      margin-bottom: 5px;
     }
 
     #artista-musica { 
-      font-size: 1.5rem; /* Artista menor */
+      font-size: 1.5rem;
       font-weight: normal;
-      text-transform: uppercase; /* Em maiúsculas */
+      text-transform: uppercase;
     }
   </style>
 </head>
 <body>
   <div id="widget-container" style="display: flex; align-items: center; padding: 10px;">
-    <svg id="icone-musica-img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M64 64c0-17.7 14.3-32 32-32H224V128H352V288h16c17.7 0 32 14.3 32 32s-14.3 32-32 32H368v32h16c17.7 0 32 14.3 32 32s-14.3 32-32 32H368v32c0 17.7-14.3 32-32 32H256c-17.7 0-32-14.3-32-32V416H96c-17.7 0-32-14.3-32-32V64zM320 0H256V160c0 17.7 14.3 32 32 32H448V128 0c0-17.7-14.3-32-32-32H352c-17.7 0-32 14.3-32 32zM0 448c0 35.3 28.7 64 64 64H192c35.3 0 64-28.7 64-64s-28.7-64-64-64H64c-35.3 0-64 28.7-64 64z"/></svg>
+    <svg id="icone-musica-img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+      <path d="M64 64c0-17.7 14.3-32 32-32H224V128H352V288h16c17.7 0 32 14.3 32 32s-14.3 32-32 32H368v32h16c17.7 0 32 14.3 32 32s-14.3 32-32 32H368v32c0 17.7-14.3 32-32 32H256c-17.7 0-32-14.3-32-32V416H96c-17.7 0-32-14.3-32-32V64zM320 0H256V160c0 17.7 14.3 32 32 32H448V128 0c0-17.7-14.3-32-32-32H352c-17.7 0-32 14.3-32 32zM0 448c0 35.3 28.7 64 64 64H192c35.3 0 64-28.7 64-64s-28.7-64-64-64H64c-35.3 0-64 28.7-64 64z"/>
+    </svg>
 
     <div id="info-musica">
-      <div id="titulo-musica">Carregando Música...</div>
-      <div id="artista-musica">Carregando Artista...</div>
+      <div id="titulo-musica">Carregando música...</div>
+      <div id="artista-musica">Aguardando...</div>
     </div>
   </div>
   
   <script>
-    const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co"; // Seu URL do Supabase
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeGd2a3JkbW1janZmamhtdmJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MTUsImV4cCI6MjA3NjIyMTQxNX0.CPQ7pLFCWzb1gUE3upcv78ErCEPSGcWUpDksu3CC45g"; // Sua chave do Supabase
+    const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeGd2a3JkbW1janZmamhtdmJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MTUsImV4cCI6MjA3NjIyMTQxNX0.CPQ7pLFCWzb1gUE3upcv78ErCEPSGcWUpDksu3CC45g";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     async function atualizar() {
-      const { data, error } = await supabase.from('estado_player').select('musica_atual, musicas(titulo, artista)').eq('id',1).single();
-      if (error) {
-        console.error("Erro ao buscar dados do Supabase:", error);
-        document.getElementById('titulo-musica').textContent = "Erro";
-        document.getElementById('artista-musica').textContent = "Verifique a conexão";
+      // 1️⃣ Buscar o ID da música atual
+      const { data: estado, error: errEstado } = await supabase
+        .from('estado_player')
+        .select('musica_atual')
+        .eq('id', 1)
+        .single();
+
+      if (errEstado || !estado || !estado.musica_atual) {
+        document.getElementById('titulo-musica').textContent = "Nenhuma música";
+        document.getElementById('artista-musica').textContent = "";
         return;
       }
-      
-      const m = data.musicas;
-      if (m) {
-        document.getElementById('titulo-musica').textContent = m.titulo ? m.titulo.toUpperCase() : "NOME DA MÚSICA";
-        document.getElementById('artista-musica').textContent = m.artista ? m.artista.toUpperCase() : "NOME DO CANTOR";
-      } else {
-        document.getElementById('titulo-musica').textContent = "Nenhuma Música";
-        document.getElementById('artista-musica').textContent = "Em reprodução";
+
+      // 2️⃣ Buscar informações da música atual
+      const { data: musica, error: errMusica } = await supabase
+        .from('musicas')
+        .select('titulo, artista')
+        .eq('id', estado.musica_atual)
+        .single();
+
+      if (errMusica || !musica) {
+        document.getElementById('titulo-musica').textContent = "Nenhuma música";
+        document.getElementById('artista-musica').textContent = "";
+        return;
       }
+
+      // 3️⃣ Atualizar o texto no widget
+      document.getElementById('titulo-musica').textContent = musica.titulo ? musica.titulo.toUpperCase() : "MÚSICA DESCONHECIDA";
+      document.getElementById('artista-musica').textContent = musica.artista ? musica.artista.toUpperCase() : "";
     }
 
     // Atualiza imediatamente e depois a cada 5 segundos

@@ -3,58 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Now Playing Widget</title>
+  <title>Now Playing Widget OBS</title>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     body { 
       margin: 0; 
-      background: transparent; /* Fundo transparente para o OBS */
-      color: black; 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fonte legível */
-      padding: 5px; 
+      background: transparent; /* Fundo completamente transparente */
+      color: black; /* Cor do texto preta */
+      font-family: 'Bebas Neue', Impact, sans-serif; /* Fonte similar à da imagem */
+      /* Se a fonte Bebas Neue não carregar, Impact ou uma similar será usada */
+      padding: 0; /* Remover qualquer padding extra */
+      display: flex; /* Para alinhar o conteúdo */
+      align-items: center; /* Alinha verticalmente */
+      justify-content: flex-start; /* Alinha à esquerda */
+      height: 100vh; /* Ocupa a altura total da viewport para alinhamento */
+      width: 100vw;  /* Ocupa a largura total da viewport */
     }
-    #widget-container {
+
+    /* O ícone da nota musical (usaremos uma imagem ou um caracter maior) */
+    #icone-musica-img {
+        height: 60px; /* Ajuste o tamanho conforme necessário */
+        margin-right: 15px;
+        filter: brightness(0); /* Deixa a imagem preta se ela for colorida */
+    }
+
+    #info-musica {
         display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.9); /* Fundo semi-branco para destaque no stream */
-        border-radius: 5px;
-        padding: 5px 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        flex-direction: column; /* Título e artista em colunas */
+        line-height: 1; /* Para aproximar as linhas */
     }
-    #icone-musica {
-        font-size: 1.5rem; 
-        margin-right: 10px;
-        line-height: 1;
-        color: #1DB954; /* Cor verde de destaque */
-    }
-    #texto { 
-      font-size: 1.5rem; 
+
+    #titulo-musica { 
+      font-size: 2.5rem; /* Título maior */
       font-weight: bold;
-      white-space: nowrap; /* Impede a quebra de linha */
+      text-transform: uppercase; /* Em maiúsculas */
+      margin-bottom: 5px; /* Espaço entre título e artista */
+    }
+
+    #artista-musica { 
+      font-size: 1.5rem; /* Artista menor */
+      font-weight: normal;
+      text-transform: uppercase; /* Em maiúsculas */
     }
   </style>
 </head>
 <body>
-  <div id="widget-container">
-    <div id="icone-musica">🎵</div>
-    <div id="texto">Carregando...</div>
+  <div id="widget-container" style="display: flex; align-items: center; padding: 10px;">
+    <svg id="icone-musica-img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M64 64c0-17.7 14.3-32 32-32H224V128H352V288h16c17.7 0 32 14.3 32 32s-14.3 32-32 32H368v32h16c17.7 0 32 14.3 32 32s-14.3 32-32 32H368v32c0 17.7-14.3 32-32 32H256c-17.7 0-32-14.3-32-32V416H96c-17.7 0-32-14.3-32-32V64zM320 0H256V160c0 17.7 14.3 32 32 32H448V128 0c0-17.7-14.3-32-32-32H352c-17.7 0-32 14.3-32 32zM0 448c0 35.3 28.7 64 64 64H192c35.3 0 64-28.7 64-64s-28.7-64-64-64H64c-35.3 0-64 28.7-64 64z"/></svg>
+
+    <div id="info-musica">
+      <div id="titulo-musica">Carregando Música...</div>
+      <div id="artista-musica">Carregando Artista...</div>
+    </div>
   </div>
+  
   <script>
-    const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeGd2a3JkbW1janZmamhtdmJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MTUsImV4cCI6MjA3NjIyMTQxNX0.CPQ7pLFCWzb1gUE3upcv78ErCEPSGcWUpDksu3CC45g";
+    const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co"; // Seu URL do Supabase
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeGd2a3JkbW1janZmamhtdmJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MTUsImV4cCI6MjA3NjIyMTQxNX0.CPQ7pLFCWzb1gUE3upcv78ErCEPSGcWUpDksu3CC45g"; // Sua chave do Supabase
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     async function atualizar() {
-      // Faz a consulta ao estado do player e ao título/artista da música
       const { data, error } = await supabase.from('estado_player').select('musica_atual, musicas(titulo, artista)').eq('id',1).single();
-      if (error) return console.error(error);
+      if (error) {
+        console.error("Erro ao buscar dados do Supabase:", error);
+        document.getElementById('titulo-musica').textContent = "Erro";
+        document.getElementById('artista-musica').textContent = "Verifique a conexão";
+        return;
+      }
       
       const m = data.musicas;
-      // Atualiza o texto, usando a nova estrutura HTML
-      document.getElementById('texto').textContent = `${m.titulo} - ${m.artista}`;
+      if (m) {
+        document.getElementById('titulo-musica').textContent = m.titulo ? m.titulo.toUpperCase() : "NOME DA MÚSICA";
+        document.getElementById('artista-musica').textContent = m.artista ? m.artista.toUpperCase() : "NOME DO CANTOR";
+      } else {
+        document.getElementById('titulo-musica').textContent = "Nenhuma Música";
+        document.getElementById('artista-musica').textContent = "Em reprodução";
+      }
     }
 
-    // Atualiza a cada 5 segundos
+    // Atualiza imediatamente e depois a cada 5 segundos
     atualizar();
     setInterval(atualizar, 5000);
   </script>

@@ -3,25 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Now Playing</title>
+  <title>Now Playing Widget</title>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
-    body { margin: 0; background: transparent; color: white; font-family: sans-serif; }
-    #texto { font-size: 1.2rem; }
+    body { 
+      margin: 0; 
+      background: transparent; /* Fundo transparente para o OBS */
+      color: black; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fonte legível */
+      padding: 5px; 
+    }
+    #widget-container {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.9); /* Fundo semi-branco para destaque no stream */
+        border-radius: 5px;
+        padding: 5px 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    #icone-musica {
+        font-size: 1.5rem; 
+        margin-right: 10px;
+        line-height: 1;
+        color: #1DB954; /* Cor verde de destaque */
+    }
+    #texto { 
+      font-size: 1.5rem; 
+      font-weight: bold;
+      white-space: nowrap; /* Impede a quebra de linha */
+    }
   </style>
 </head>
 <body>
-  <div id="texto">Carregando...</div>
+  <div id="widget-container">
+    <div id="icone-musica">🎵</div>
+    <div id="texto">Carregando...</div>
+  </div>
   <script>
     const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpeGd2a3JkbW1janZmamhtdmJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2NDU0MTUsImV4cCI6MjA3NjIyMTQxNX0.CPQ7pLFCWzb1gUE3upcv78ErCEPSGcWUpDksu3CC45g";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     async function atualizar() {
+      // Faz a consulta ao estado do player e ao título/artista da música
       const { data, error } = await supabase.from('estado_player').select('musica_atual, musicas(titulo, artista)').eq('id',1).single();
       if (error) return console.error(error);
+      
       const m = data.musicas;
-      document.getElementById('texto').textContent = `🎵 ${m.titulo} - ${m.artista}`;
+      // Atualiza o texto, usando a nova estrutura HTML
+      document.getElementById('texto').textContent = `${m.titulo} - ${m.artista}`;
     }
 
     // Atualiza a cada 5 segundos

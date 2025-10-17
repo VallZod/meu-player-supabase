@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meu Player Pessoal</title>
+  <title>Meu Player Pessoal - Gerenciamento</title>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     body {
@@ -39,12 +39,34 @@
       padding: 0.4rem;
       cursor: pointer;
       border-bottom: 1px solid #333;
+      display: flex; /* Novo: Para layout flexível */
+      justify-content: space-between; /* Para separar o texto dos botões */
+      align-items: center;
     }
     .item:hover { background: #333; }
+    .item-texto {
+        flex-grow: 1;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        margin-right: 5px;
+    }
+    .item-botoes button {
+        margin: 0 0.1rem;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
+        background: #555;
+    }
     input, label {
       display: block;
       margin: 0.3rem 0;
       width: 100%;
+      box-sizing: border-box; /* Garante que o padding não estoure o width */
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      border: none;
+      background: #333;
+      color: white;
     }
     .upload {
       background: #1a1a1a;
@@ -69,7 +91,6 @@
       <button onclick="pausar()">⏸</button>
       <button onclick="proxima()">⏭</button>
     </div>
-    <button onclick="editarMusica()">✏️ Editar música</button>
   </div>
 
   <div class="lista" id="lista"></div>
@@ -82,6 +103,21 @@
     <input type="text" id="capaUpload" placeholder="URL da capa (opcional)">
     <button onclick="uploadMusica()">Enviar</button>
   </div>
+
+  <div class="upload" style="margin-top: 1rem;">
+    <h3>🗄 Armazenamento</h3>
+    <div style="background: #333; height: 20px; border-radius: 10px; margin-bottom: 0.5rem;">
+      <div id="barraArmazenamento" style="background: #28a745; height: 100%; border-radius: 10px; width: 0%;"></div>
+    </div>
+    <p id="textoArmazenamento" style="margin: 0; text-align: right;"></p>
+  </div>
+
+  <div class="upload" style="margin-top: 1rem;">
+    <h3>🔗 URL do Widget para OBS</h3>
+    <input type="text" id="urlObs" readonly style="cursor: copy;" onclick="this.select(); document.execCommand('copy'); alert('URL copiada!');">
+    <p style="font-size: 0.8rem; margin: 0.5rem 0 0;">(Clique para copiar a URL)</p>
+  </div>
+
 
   <script>
     const SUPABASE_URL = "https://dixgvkrdmmcjvfjhmvbo.supabase.co";
@@ -99,17 +135,58 @@
       if (musicas.length && !document.getElementById('audio').src)
         tocarMusica(0);
     }
+    
+    // NOVO: Carrega e exibe o uso de armazenamento (MOCK)
+    async function carregarArmazenamento() {
+      // Esta é uma simulação (MOCK) do uso de armazenamento.
+      // Você pode ajustar os valores, mas para o uso real é necessário um backend.
+      
+      const MAX_GB = 1; // Limite de 1GB simulado
+      const MUSICAS_MOCK = musicas.length; 
+      const USO_MOCK_MB = (MUSICAS_MOCK * 5); // Simulação: 5MB por música
+      const USO_GB = USO_MOCK_MB / 1024;
 
+      const porcentagem = (USO_GB / MAX_GB) * 100;
+      const texto = `${USO_GB.toFixed(2)} GB / ${MAX_GB} GB (${porcentagem.toFixed(1)}%)`;
+      
+      document.getElementById('barraArmazenamento').style.width = `${Math.min(porcentagem, 100)}%`;
+      document.getElementById('textoArmazenamento').textContent = texto;
+    }
+
+    // ATUALIZADO: Mostra a lista com botões de gerenciamento
     function mostrarLista() {
       const lista = document.getElementById('lista');
       lista.innerHTML = '';
       musicas.forEach((m, i) => {
         const div = document.createElement('div');
-        div.textContent = `${m.titulo} - ${m.artista}`;
         div.className = 'item';
-        div.onclick = () => tocarMusica(i);
+
+        const texto = document.createElement('span');
+        texto.textContent = `${m.titulo} - ${m.artista}`;
+        texto.className = 'item-texto';
+        texto.onclick = () => tocarMusica(i);
+        
+        const botoes = document.createElement('div');
+        botoes.className = 'item-botoes';
+        
+        const btnEditar = document.createElement('button');
+        btnEditar.textContent = '✏️';
+        // Passa o ID da música para a função de edição
+        btnEditar.onclick = (e) => { e.stopPropagation(); editarMusica(m.id); };
+        
+        const btnDeletar = document.createElement('button');
+        btnDeletar.textContent = '🗑️';
+        // Passa o ID da música para a função de exclusão
+        btnDeletar.onclick = (e) => { e.stopPropagation(); deletarMusica(m.id); };
+        
+        botoes.appendChild(btnEditar);
+        botoes.appendChild(btnDeletar);
+        
+        div.appendChild(texto);
+        div.appendChild(botoes);
         lista.appendChild(div);
       });
+      carregarArmazenamento();
     }
 
     function tocarMusica(i) {
@@ -136,6 +213,7 @@
     async function uploadMusica() {
       const file = document.getElementById('file').files[0];
       if (!file) return alert('Selecione um arquivo MP3!');
+      
       const nomeArquivo = `${Date.now()}_${file.name}`;
       const { data, error } = await supabase.storage.from('musicas_novo').upload(nomeArquivo, file);
       if (error) return alert('Erro ao enviar: ' + error.message);
@@ -157,20 +235,69 @@
       carregarMusicas();
     }
 
-    async function editarMusica() {
-      const m = musicas[indiceAtual];
-      if (!m) return alert('Nenhuma música selecionada!');
+    // ATUALIZADO: Função de Edição
+    async function editarMusica(id) {
+      const m = musicas.find(m => m.id === id);
+      if (!m) return alert('Música não encontrada!');
+      
       const novoTitulo = prompt('Novo título:', m.titulo);
       const novoArtista = prompt('Novo artista:', m.artista || '');
       const novaCapa = prompt('Nova URL de capa:', m.capa || '');
+      
+      if (novoTitulo === null || novoArtista === null || novaCapa === null) return;
+      
       await supabase.from('musicas').update({
         titulo: novoTitulo, artista: novoArtista, capa: novaCapa
       }).eq('id', m.id);
+      
       alert('Música atualizada!');
       carregarMusicas();
     }
+    
+    // NOVO: Função de Exclusão
+    async function deletarMusica(id) {
+        if (!confirm('Tem certeza que deseja excluir esta música? Isso é irreversível e também apagará o arquivo do Storage do Supabase!')) return;
+        
+        const musica = musicas.find(m => m.id === id);
+        if (!musica) return alert('Música não encontrada!');
+        
+        // 1. Encontrar o nome do arquivo para deletar do Storage
+        const urlPartes = musica.url_arquivo.split('/');
+        let nomeArquivoCompleto = urlPartes.pop();
+        if (nomeArquivoCompleto.includes('?')) {
+            nomeArquivoCompleto = nomeArquivoCompleto.split('?')[0];
+        }
+        
+        // 2. Deletar do Storage
+        const { error: storageError } = await supabase.storage.from('musicas_novo').remove([nomeArquivoCompleto]);
+        if (storageError) console.warn("Aviso: Erro ao deletar arquivo do Storage. O registro DB será removido.", storageError);
+        
+        // 3. Deletar do Banco de Dados
+        const { error: dbError } = await supabase.from('musicas').delete().eq('id', id);
+        if (dbError) return alert('Erro ao deletar do banco de dados: ' + dbError.message);
+
+        alert('Música excluída com sucesso!');
+        carregarMusicas();
+    }
+    
+    // NOVO: Configura a URL do OBS
+    function configurarUrlObs() {
+      const urlAtual = window.location.href;
+      // Tenta construir a URL do nowplaying.html baseado na URL atual do player.html
+      let urlBase = urlAtual.replace('player.html', '');
+      
+      // Garante o caminho correto (ex: https://dominio.netlify.app/Projeto Musicas/nowplaying.html)
+      if (!urlBase.endsWith('/')) {
+         urlBase += '/';
+      }
+      
+      const urlCompleta = urlBase.replace(/Projeto Musicas\/?/, 'Projeto Musicas/nowplaying.html');
+      
+      document.getElementById('urlObs').value = urlCompleta;
+    }
 
     carregarMusicas();
+    configurarUrlObs();
   </script>
 </body>
 </html>
